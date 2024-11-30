@@ -1,80 +1,138 @@
 #include <WiFi.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
+#include <HTTPClient.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 #include <Adafruit_SSD1306.h>
-#include "time.h"
+#include <DHT.h>
+#include <Wire.h>
+#include "MAX30105.h"
 
-// Configuraci髇 de la pantalla OLED
-#define ANCHO 128
-#define ALTO 64
+// Credenciales de WiFi
+const char* ssid = "TuSSID";
+const char* password = "TuPassword";
+
+// Configuraci贸n de Ubidots
+const char* ubidots_token = "TuTokenUbidots";
+const char* ubidots_url = "http://industrial.api.ubidots.com/api/v1.6/devices/esp32";
+
+// Configuraci贸n del DHT11
+#define DHTPIN 15 // Pin al que est谩 conectado el DHT11
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// Configuraci贸n del MAX30102
+MAX30105 particleSensor;
+
+// Configuraci贸n de la pantalla OLED
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-Adafruit_SSD1306 oled(ANCHO, ALTO, &Wire, OLED_RESET);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// Configuraci髇 de Wi-Fi
-const char* ssid = "RED";         // Reemplaza con el nombre de tu red Wi-Fi
-const char* password = "CONTRASE袮"; // Reemplaza con la contrase馻 de tu red Wi-Fi
+// Configuraci贸n de NTP
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000); // Actualizaci贸n cada minuto
 
-// Configuraci髇 de NTP
-const char* ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = -21600; // UTC-6 para M閤ico Central (ajusta seg鷑 tu zona horaria)
-const int daylightOffset_sec = 0;
+// Variables globales
+float temperatura = 0.0;
+float humedad = 0.0;
+int pulso = 0;
+int oxigenacion = 0;
+int pulsoData[60]; // Almacena los valores del pulso del 煤ltimo minuto
+int pulsoIndex = 0;
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(23, 19); // Configurar SDA = 23, SCL = 19 para la pantalla OLED
 
-  // Inicializar pantalla OLED
-  if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("Error: No se pudo inicializar la pantalla OLED.");
-    while (true);
-  }
-  oled.clearDisplay();
-
-  // Conectar a Wi-Fi
-  Serial.print("Conectando a Wi-Fi...");
+  // Conexi贸n WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.print(".");
+    Serial.println("Conectando a WiFi...");
   }
-  Serial.println("\nConexi髇 Wi-Fi establecida.");
+  Serial.println("Conectado a WiFi!");
 
-  // Configurar hora mediante NTP
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  Serial.println("Sincronizando hora...");
+  // Iniciar NTPClient
+  timeClient.begin();
+
+  // Iniciar DHT11
+  dht.begin();
+
+  // Iniciar MAX30102
+  if (!particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+    Serial.println("MAX30102 no detectado. Verifica la conexi贸n.");
+    while (1);
+  }
+  particleSensor.setup(); // Configuraci贸n predeterminada del sensor
+
+  // Iniciar pantalla OLED
+  if (!display.begin(SSD1306_I2C_ADDRESS, 0x3C)) {
+    Serial.println("Error iniciando la pantalla OLED.");
+    while (1);
+  }
+  display.clearDisplay();
+  display.display();
 }
 
 void loop() {
-  // Obtener la hora actual
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Error al obtener la hora.");
-    return;
+  // Actualizar hora
+  timeClient.update();
+  String currentTime = timeClient.getFormattedTime();
+
+  // Leer DHT11
+  temperatura = dht.readTemperature();
+  humedad = dht.readHumidity();
+  if (isnan(temperatura) || isnan(humedad)) {
+    Serial.println("Error leyendo el DHT11");
+    temperatura = 0.0;
+    humedad = 0.0;
   }
 
-  // Limpiar pantalla
-  oled.clearDisplay();
+  // Leer MAX30102
+  pulso = particleSensor.getIR(); // Suponiendo un umbral
+  oxigenacion = random(90, 100); // Placeholder para simulaci贸n
 
-  // Mostrar "Hora actual:"
-  oled.setCursor(0, 0);
-  oled.setTextSize(1);
-  oled.setTextColor(WHITE);
-  oled.print("Hora actual:");
+  // Guardar el pulso en el arreglo y graficar cada minuto
+  pulsoData[pulsoIndex] = pulso;
+  pulsoIndex = (pulsoIndex + 1) % 60; // Rotar 铆ndice
 
-  // Mostrar la hora en formato HH:MM:SS
-  oled.setCursor(10, 30);
-  oled.setTextSize(2);
-  if (timeinfo.tm_hour < 10) oled.print('0'); // A馻dir cero si es menor a 10
-  oled.print(timeinfo.tm_hour);
-  oled.print(':');
-  if (timeinfo.tm_min < 10) oled.print('0'); // A馻dir cero si es menor a 10
-  oled.print(timeinfo.tm_min);
-  oled.print(':');
-  if (timeinfo.tm_sec < 10) oled.print('0'); // A馻dir cero si es menor a 10
-  oled.print(timeinfo.tm_sec);
+  // Mostrar datos en OLED
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.printf("Hora: %s\nTemp: %.1fC\nHumedad: %.1f%%\nPulso: %d\nO2: %d%%", 
+                 currentTime.c_str(), temperatura, humedad, pulso, oxigenacion);
 
-  // Actualizar pantalla
-  oled.display();
+  // Graficar pulso
+  for (int i = 0; i < SCREEN_WIDTH && i < pulsoIndex; i++) {
+    int y = map(pulsoData[i], 0, 1023, SCREEN_HEIGHT - 1, 0); // Escalar valores
+    display.drawPixel(i, y, SSD1306_WHITE);
+  }
+  display.display();
 
-  delay(1000); // Actualizar cada segundo
+  // Enviar datos a Ubidots
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(ubidots_url);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-Auth-Token", ubidots_token);
+
+    String payload = String("{\"temperatura\":") + temperatura +
+                     ",\"humedad\":" + humedad +
+                     ",\"oxigenacion\":" + oxigenacion +
+                     ",\"pulso\":" + pulso + "}";
+    int httpResponseCode = http.POST(payload);
+
+    if (httpResponseCode > 0) {
+      Serial.printf("Datos enviados a Ubidots: %s\n", payload.c_str());
+    } else {
+      Serial.printf("Error enviando datos: %s\n", http.errorToString(httpResponseCode).c_str());
+    }
+    http.end();
+  } else {
+    Serial.println("WiFi desconectado. No se pudo enviar datos.");
+  }
+
+  delay(1000); // Esperar un segundo antes de la pr贸xima iteraci贸n
 }
