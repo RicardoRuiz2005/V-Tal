@@ -1,8 +1,3 @@
----
-title: "V-Tal: Pulsera Inteligente"
-output: html_document
----
-
 # V-Tal
 
 **V-Tal** es una pulsera inteligente diseñada para monitorear la salud y realizar prediagnósticos basados en signos vitales. Este dispositivo combina sensores biomédicos avanzados con tecnología portátil, ofreciendo una solución accesible y práctica para el cuidado personal.
