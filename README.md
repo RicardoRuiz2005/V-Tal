@@ -25,16 +25,8 @@ La pulsera **V-Tal** recopila datos continuos de oxigenación, pulso y temperatu
    - **Descripción:** Disminución de la oxigenación de la sangre con cambios en el pulso.
    - **Fundamento:** Basado en principios de bioingeniería, la hipoxia puede reflejar problemas respiratorios.
 
-### Herramientas utilizadas
-- **Plataformas de análisis:**
-  - **Python:** Para procesar datos y generar gráficas.
-  - **Excel:** Para estadísticas descriptivas.
-  
-### Ejemplo de análisis
-A continuación, se presenta un análisis basado en datos recopilados durante una semana:
-
-- **Gráfica de temperatura y pulso:**
-  - Se observa un aumento sostenido de la temperatura corporal entre el día 3 y 5, acompañado de un incremento en el pulso.
+### Fundamentación en principios de ingeniería y ciencias
+La identificación de estos patrones se basa en modelos médicos reconocidos y principios de bioingeniería que relacionan los datos obtenidos con estados de salud específicos.
 
 ---
 
@@ -50,23 +42,21 @@ La pulsera **V-Tal** no solo recopila datos, sino que también implementa accion
 
 ### Restricciones del ambiente
 El diseño considera limitaciones como:
-- Autonomía limitada de la batería.
+- Materiales resistentes al uso cotidiano.
 - Conexión intermitente a dispositivos móviles.
 
 ---
 
 ## SICT0402 - Aplicación de principios de sustentabilidad
 
-### Principios aplicados
+### Principios aplicados 
 La pulsera **V-Tal** se diseñó teniendo en cuenta la sustentabilidad:
-- **Energía eficiente:**
-  - Optimización del consumo energético de los sensores.
 - **Materiales reciclables:**
-  - Componentes fabricados con plásticos reciclados.
+  - Carcasa hecha a base de materiales reciclados. 
 
 ### Indicadores y métricas
-- **Duración de la batería:** 48 horas de uso continuo.
-- **Porcentaje de materiales reciclables:** 70%.
+- **Porcentaje de materiales reciclables:** 30%.
+- **Compatibilidad con procesos de reciclaje al finalizar su vida útil.**
 
 ---
 
